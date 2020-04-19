@@ -1,12 +1,24 @@
-# self_driving_car_TD3
+# Self Driving Car using Reinforcement Learning(Twin Delayed DDPG)
 
-#### Right now, I have proper understanding of both the Deep Q-learning implementation and the TD3 codes.Next step is to integrate both the things together. So, right now I am in the process of integrating both the things. The running code is not ready yet. 
+### Problem Statement:
+Train a car to move from one source point to destination point following the give proper road pathway covering the minimum distance in a map.
 
-### Things which are done
-* the function to get image from the environment based on the current location to be fed to the network. Refer to the ipynb file for implementation details of merging car image on top of sand image.
-* the network modules are modifed according to TD3, i.e. convolutional Actor and Critic networks are defined.
+### Explanation of Each of the individual files
+#### tesla.kv
+This is the kv file, where the visualisation parameters of the environment is defined.
 
+#### main.py
+##### The main file where the "Game" widget is called for running the environment. The main componets of the file are explained below.
 
-### TODO
-* Finishing the update function of network file, which will update the replay buffer as well as execute the training of batch after every second.
-* Having a different python file named env.py which will take care of all environment related functionalities.
+*get_input_image* : The function to crop the image patch from the map containing the car, using the position of the car information. This image will be our state variable for the TD3 algorithm.
+
+*Car* : This block is to define the car and updating the pos and velocity parameters of the car to make it moving.
+
+*Game* : This is the back-bone of the app. The update fuction of this class is getting called at every second and it gets the current state and passes it to the brain block of network.py file, which is used for training the network and at the same time it updates the environment using action returned by the network. Based on the action the reward is also calcuated and accumulated for training and tracking purpose. The action only makes the car moving.
+We are having on "done_bool" variable, which is keeping track if one episode is done based on two parameters if the car reached the final destination by calculating distance or if the total reward for that particualar episode is not improving and it went beyoing certain total reward point. If either of the conditions are satisfied then the environmnent is reset and a new episode is started with a random starting point and this is how this process continues. Whenever one episodes gets over, the done_bool variable is used to trigger the training. The done_bool variable is passed to the network.py file.
+
+#### network.py
+##### The file which has the architecture for the basic building networks of The TD3 model named Anchor and Critic. The training strategy is also defined in this file.
+
+*ReplayBuffer* : The class to construct the replay buffer for saving the transition which will be randomly sampled during the time of training.
+
