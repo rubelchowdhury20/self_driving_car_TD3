@@ -22,7 +22,7 @@ Config.set('graphics', 'width', '768')
 Config.set('graphics', 'height', '670')
 
 # global variable
-brain = TD3(5)
+brain = TD3(10)
 
 last_angle = 0
 last_reward = 0
@@ -40,8 +40,10 @@ def init():
 	global first_update
 	global flas
 
-	sand_img = PILImage.open("./images/map3.png").convert('L')
+	sand_img = PILImage.open("./images/map2.png").convert('L')
 	sand = np.asarray(sand_img)/255
+	sand = np.transpose(sand)
+
 	car_img = PILImage.open("./images/car.png").convert('RGBA')
 	car_img = car_img.resize((20, 10))
 
@@ -55,27 +57,32 @@ def init():
 # Initializing the last distance
 last_distance = 0
 
-
+# count = 0
 def get_input_image(x, y, angle):
-	base = 20
-	theta = (angle - 90) * math.pi / 180
+	y = largeur - y
+	# global count
+	base = 15
+	theta = angle * math.pi / 180
 
-	# x1, y1 = x + (4/3) * base * math.cos(theta), y - (4/3) * base * math.sin(theta)
-	# x2, y2 = x + (2/3) * base * math.cos(theta + (135*math.pi/180)), y - (2/3) * base * math.sin(theta + (135*math.pi/180))
-	# x3, y3 = x + (2/3) * base * math.cos(theta + (225*math.pi/180)), y - (2/3) * base * math.sin(theta + (225*math.pi/180))
+	x1, y1 = x + (4/3) * base * math.cos(theta), y - (4/3) * base * math.sin(theta)
+	x2, y2 = x + (2/3) * base * math.cos(theta + (135*math.pi/180)), y - (2/3) * base * math.sin(theta + (135*math.pi/180))
+	x3, y3 = x + (2/3) * base * math.cos(theta + (225*math.pi/180)), y - (2/3) * base * math.sin(theta + (225*math.pi/180))
 
-	x1, y1 = y + (4/3) * base * math.cos(theta), x - (4/3) * base * math.sin(theta)
-	x2, y2 = y + (2/3) * base * math.cos(theta + (135*math.pi/180)), x - (2/3) * base * math.sin(theta + (135*math.pi/180))
-	x3, y3 = y + (2/3) * base * math.cos(theta + (225*math.pi/180)), x - (2/3) * base * math.sin(theta + (225*math.pi/180))
+	# x1, y1 = y + (4/3) * base * math.cos(theta), x - (4/3) * base * math.sin(theta)
+	# x2, y2 = y + (2/3) * base * math.cos(theta + (135*math.pi/180)), x - (2/3) * base * math.sin(theta + (135*math.pi/180))
+	# x3, y3 = y + (2/3) * base * math.cos(theta + (225*math.pi/180)), x - (2/3) * base * math.sin(theta + (225*math.pi/180))
 
 
 	sand_img_copy = sand_img.copy()
 	draw = ImageDraw.Draw(sand_img_copy)
 	draw.polygon([(x1, y1), (x2, y2), (x3, y3)], fill = (0))
+	# draw.polygon([(x, y), (x+3, y+3), (x+5, y+5)], fill= (0))
 
-	img_patch = sand_img_copy.crop((y-300, x-300, y+300, x+300))
+	img_patch = sand_img_copy.crop((x-20, y-20, x+20, y+20))
 	# img_patch.save("./folder/image_" + str(count) + ".png")
 	# count = count + 1
+	img_patch = np.asarray(img_patch)/255
+	img_patch = np.transpose(img_patch)
 	img_patch = np.expand_dims(img_patch, axis=0)
 	return img_patch
 
@@ -140,6 +147,7 @@ class Game(Widget):
 		distance = np.sqrt((self.car.x - goal_x)**2 + (self.car.y - goal_y)**2)
 		input_image = get_input_image(int(self.car.x), int(self.car.y), self.car.angle)
 		action = brain.update(last_reward, input_image, done_bool)
+		print(action)
 
 		done_bool = False
 
@@ -175,7 +183,7 @@ class Game(Widget):
 
 		total_reward += last_reward
 
-		if distance < 25 or total_reward<-3000:
+		if distance < 25 or total_reward<-5000:
 			print("one episode is done")
 			done_bool = True
 			self.car.x = int(np.random.randint(25, self.width-25, 1)[0])

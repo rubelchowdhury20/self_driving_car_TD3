@@ -7,7 +7,7 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
-
+from torchvision import transforms
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -51,22 +51,16 @@ class Actor(nn.Module):
 			nn.ReLU(True),
 			nn.BatchNorm2d(48),
 
-			nn.Conv2d(48, 16, 1, 1, 0, bias=False),
-
 			nn.AvgPool2d(kernel_size = 7),
-			nn.Flatten())
-
-		self.actor_linear_1 = nn.Linear(17, 1)
+			nn.Flatten(),
 			
+			nn.Linear(48, 24),
+			nn.Linear(24, 1))
 		self.max_action = max_action
 
-	def forward(self, x, y):
+	def forward(self, x):
 		x = self.main(x)
-		x = torch.cat([x, y], 1)
-		x = self.actor_linear_1(x)
-
 		x = self.max_action * torch.tanh(x)
-		# print(x)
 		return x
 
 class Critic(nn.Module):
@@ -200,18 +194,16 @@ class ReplayBuffer(object):
 			
 	def sample(self, batch_size):
 		ind = np.random.randint(0, len(self.storage), size=batch_size)
-		batch_states, batch_orientations, batch_next_states, batch_next_orientations, batch_actions, batch_rewards, batch_dones = [], [], [], [], [], [], []
+		batch_states, batch_next_states, batch_actions, batch_rewards, batch_dones = [], [], [], [], []
 		for i in ind:
-			state, orientation, next_state, next_orientation, action, reward, done = self.storage[i]
+			state, next_state, action, reward, done = self.storage[i]
 			batch_states.append(np.array(state, copy=False))
-			batch_orientations.append(np.array(orientation, copy=False))
 			batch_next_states.append(np.array(next_state, copy=False))
-			batch_next_orientations.append(np.array(orientation, copy=False))
 			batch_actions.append(np.array(action, copy=False))
 			batch_rewards.append(np.array(reward, copy=False))
 			batch_dones.append(np.array(done, copy=False))
 			
-		return np.array(batch_states), np.array(batch_orientations).reshape(-1, 1), np.array(batch_next_states), np.array(batch_next_orientations).reshape(-1, 1), np.array(batch_actions).reshape(-1, 1), np.array(batch_rewards).reshape(-1, 1), np.array(batch_dones).reshape(-1, 1)
+		return np.array(batch_states), np.array(batch_next_states), np.array(batch_actions).reshape(-1, 1), np.array(batch_rewards).reshape(-1, 1), np.array(batch_dones).reshape(-1, 1)
 
 
 # Implementing TD3
@@ -229,28 +221,35 @@ class TD3(object):
 		self.max_action = max_action
 
 		self.last_state = torch.ones((1, 40, 40))
-		self.last_orientation = 0
 		self.last_action = 0
 		self.last_reward = 0
 		self.last_done = False
 		self.episode_reward = 0
 		self.episode_timesteps = 0
 
-	def select_action(self, state, orientation):
-		state_img = torch.tensor(state).float().unsqueeze(0).to(device)
-		state_o = torch.tensor(orientation).float().unsqueeze(0).unsqueeze(0).to(device)
+		self.expl_noise = 0.1 # exploration noise - STD value of exploration gaussian noise
 
-		return int(self.actor(state_img, state_o).cpu().data.numpy().flatten().clip(-self.max_action, self.max_action))
 
-	def update(self, reward, new_state, orientation, done):
-		self.replay_buffer.add((self.last_state, self.last_orientation, new_state, orientation, self.last_action, self.last_reward, self.last_done))
-		if self.replay_buffer.length() < 3000:
+	def select_action(self, state):
+
+		state = torch.tensor(state).float().unsqueeze(0).to(device)
+		return int(self.actor(state).cpu().data.numpy().flatten().clip(-self.max_action, self.max_action))
+
+	def update(self, reward, new_state, done):
+		self.replay_buffer.add((self.last_state, new_state, self.last_action, self.last_reward, self.last_done))
+		if self.replay_buffer.length() < 10000:
 			action = int(np.random.randint(-5, 5, 1)[0])
 		else:
-			action = self.select_action(new_state, orientation)
-			print(action)
-		if done:
+			action = self.select_action(new_state)
+			# if the explore_noise parameter is not 0, we add noise to the action and we clip it
+			if self.expl_noise != 0:
+				action = (action + np.random.normal(0, self.expl_noise, size=1)).clip(-self.max_action, self.max_action)
+				action = float(action[0])
 
+		if done:
+			print(self.episode_reward)
+			print(self.episode_timesteps)
+			print("training process started........")
 			self.learn()
 			self.episode_reward = 0
 			self.episode_timesteps = 0
@@ -259,31 +258,26 @@ class TD3(object):
 
 		self.last_action = action
 		self.last_state = new_state
-		self.last_orientation = orientation
 		self.last_reward = reward
 		self.last_done = done
-
 
 		self.episode_reward += reward
 		self.episode_timesteps += 1
 
 		return action
 
-	def learn(self, batch_size=1024, discount=0.99, tau=0.005, policy_noise=0.2, noise_clip=0.5, policy_freq=2):
+	def learn(self, batch_size=512, discount=0.99, tau=0.005, policy_noise=0.2, noise_clip=0.5, policy_freq=2):
 		for it in tqdm(range(self.episode_timesteps)):
 			# sampling a batch of transition (s, s', a, r) from the memory
-			batch_states, batch_orientations, batch_next_states, batch_next_orientations, batch_actions, batch_rewards, batch_dones = self.replay_buffer.sample(batch_size)
+			batch_states, batch_next_states, batch_actions, batch_rewards, batch_dones = self.replay_buffer.sample(batch_size)
 			state = torch.Tensor(batch_states).to(device)
-			orientation = torch.Tensor(batch_orientations).to(device)
 			next_state = torch.Tensor(batch_next_states).to(device)
-			next_orientation = torch.Tensor(batch_next_orientations).to(device)
 			action = torch.Tensor(batch_actions).to(device)
 			reward = torch.Tensor(batch_rewards).to(device)
 			done = torch.Tensor(batch_dones).to(device)
 
-
 			# getting next action a' from the next state s'
-			next_action = self.actor_target(next_state, next_orientation)
+			next_action = self.actor_target(next_state)
 			
 			# adding gaussian noise to this next action a' 
 			# and we clamp it in a range of values supported by the environment.
@@ -316,7 +310,7 @@ class TD3(object):
 			# updating the actor model by gradient ascent andd it happens
 			# once every two iterations.
 			if it % policy_freq == 0:
-				actor_loss = -self.critic.q1(state, self.actor(state, orientation)).mean()
+				actor_loss = -self.critic.q1(state, self.actor(state)).mean()
 				self.actor_optimizer.zero_grad()
 				actor_loss.backward()
 				self.actor_optimizer.step()
