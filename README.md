@@ -3,10 +3,11 @@
 ### Problem Statement:
 Train a car to move from one source point to destination point following the give proper road pathway covering the minimum distance in a map
 
-### Progress Video link 
+### Progress Video link:
+[YouTube link for Endgame](https://www.youtube.com/watch?v=EV6mPqO7y-U&feature=youtu.be)]
 
 
-### Completed important steps
+### Completed important steps:
 * Written the full end-to-end training process.
 * Passed the cropped image at the exact position, along with a arrow like structure to show the direction of the car, so that the network can understand the direction of car better. This code can be found in the get_input_image function in main.py file. Example image is shown below
 <p align="center">
