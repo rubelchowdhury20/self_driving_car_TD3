@@ -6,6 +6,7 @@ Train a car to move from one source point to destination point following the giv
 * Written the full end-to-end training process.
 * Passed the cropped image at the exact position, along with a arrow like structure to show the direction of the car, so that the network can understand the direction of car better. Example image is shown below
 <img src="https://i.imgur.com/H3ylehR.png">
+
 * For the progress of training, was able to successfully train the network to make the car reach from one source to destination ignoring the sand obstacle.
 * Tried with multiple variations of the reward order to make the car keep in the sand. Which is not achieved yet. I am missing something or doing some mistake in terms of the direction of the car because of different co-ordinate of origin for kivy and pillow system.
 * The only input I am using is image. I am not sending any orientation imformation. The reason being I want the network to learn everything from the image information alone.
