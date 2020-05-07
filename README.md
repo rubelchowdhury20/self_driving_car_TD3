@@ -3,6 +3,10 @@
 ### Problem Statement:
 Train a car to move from one source point to destination point following the give proper road pathway covering the minimum distance in a map.
 
+### Summary of all the experiments and output results till now:
+* Written the full end-to-end training process.
+* 
+
 ### Explanation of Each of the individual files
 #### tesla.kv
 This is the kv file, where the visualisation parameters of the environment is defined.
