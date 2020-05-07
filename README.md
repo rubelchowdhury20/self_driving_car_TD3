@@ -2,10 +2,17 @@
 
 ### Problem Statement:
 Train a car to move from one source point to destination point following the give proper road pathway covering the minimum distance in a map.
+### Completed important steps
+* Written the full end-to-end training process.
+* Passed the cropped image at the exact position, along with a arrow like structure to show the direction of the car, so that the network can understand the direction of car better. Example image is shown below
+<img src="https://i.imgur.com/H3ylehR.png">
+* For the progress of training, was able to successfully train the network to make the car reach from one source to destination ignoring the sand obstacle.
+* Tried with multiple variations of the reward order to make the car keep in the sand. Which is not achieved yet. I am missing something or doing some mistake in terms of the direction of the car because of different co-ordinate of origin for kivy and pillow system.
+* The only input I am using is image. I am not sending any orientation imformation. The reason being I want the network to learn everything from the image information alone.
+
 
 ### Summary of all the experiments and output results till now:
-* Written the full end-to-end training process.
-* 
+* One issue I have realized with pillow to numpy conversion as well as the origin of the co-ordinates of kivy and pillow. Basically because of this issue, I followed a differnt approach from the approach of handling images in session 7. When we use the horizontal image itself I found it is easier to locate the sand value to panalize the reward system just using the complement of y value by replacing y values with (largeur - y) value.
 
 ### Explanation of Each of the individual files
 #### tesla.kv
