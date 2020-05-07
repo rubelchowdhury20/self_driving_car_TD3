@@ -1,4 +1,5 @@
 # standard library import
+import random
 
 # third party imports
 import numpy as np
@@ -212,7 +213,7 @@ class TD3(object):
 		self.actor = Actor(max_action).to(device)
 		self.actor_target = Actor(max_action).to(device)
 		self.actor_target.load_state_dict(self.actor.state_dict())
-		self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
+		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
 		self.critic = Critic().to(device)
 		self.critic_target = Critic().to(device)
 		self.critic_target.load_state_dict(self.critic.state_dict())
@@ -238,7 +239,8 @@ class TD3(object):
 	def update(self, reward, new_state, done):
 		self.replay_buffer.add((self.last_state, new_state, self.last_action, self.last_reward, self.last_done))
 		if self.replay_buffer.length() < 10000:
-			action = int(np.random.randint(-5, 5, 1)[0])
+			# action = int(np.random.randint(-0.5, 0.5, 1)[0])
+			action = random.uniform(-1, 1)
 		else:
 			action = self.select_action(new_state)
 			# if the explore_noise parameter is not 0, we add noise to the action and we clip it
@@ -266,8 +268,8 @@ class TD3(object):
 
 		return action
 
-	def learn(self, batch_size=512, discount=0.99, tau=0.005, policy_noise=0.2, noise_clip=0.5, policy_freq=2):
-		for it in tqdm(range(self.episode_timesteps)):
+	def learn(self, batch_size=128, discount=0.99, tau=0.005, policy_noise=0.2, noise_clip=0.5, policy_freq=2):
+		for it in tqdm(range(int(self.episode_timesteps * 10/batch_size))):
 			# sampling a batch of transition (s, s', a, r) from the memory
 			batch_states, batch_next_states, batch_actions, batch_rewards, batch_dones = self.replay_buffer.sample(batch_size)
 			state = torch.Tensor(batch_states).to(device)
