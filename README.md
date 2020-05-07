@@ -33,10 +33,6 @@ Train a car to move from one source point to destination point following the giv
 
 * Tried with bigger image size hoping that it might given better understanding of the state to the model. But that approach also went in vain.
 
-### Important Parameters:
-* state_dim = input_image(1x40x40)
-* action_dim = 1
-* max_action = 10
 
 ### Explanation of Each of the individual files
 #### tesla.kv
